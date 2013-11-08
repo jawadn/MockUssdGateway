@@ -30,7 +30,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
     PrintWriter writer;
     private final static Logger logger = Logger.getLogger(MockInswitchGatewayClientHandler.class.getName());
     
-    private final long pingSendIntervalInMillis = 60000000;
+    private final long pingSendIntervalInMillis = 30000;
     private long lastPingSentInMillis = 0;
     
     
@@ -91,7 +91,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                 Type type = getMsgType(requestXml);
                 
                 System.out.println("Request recieved of type:" + type.name());
-                if(!type.equals(Type.PONG) && !type.equals(Type.END)){
+                if(!type.equals(Type.PONG) && !type.equals(Type.END) && !type.equals(Type.ABORT)){
                     
                     String dialogId = (String) xpath.evaluate("/upms/msg/dialog/@id", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
                     String componentId = (String) xpath.evaluate("/upms/msg/component/@id", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
@@ -101,10 +101,11 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                         compId = Integer.valueOf(componentId);
                     }
                     String response = getResponse(type,dialogId,compId,componentType);
-                    System.out.println("Request recieved having dialog id: " + dialogId + " and component id: " + componentId);
+                    
                      synchronized(clientSocket.getOutputStream()){
                         sendMsg(response);
                      }
+                        System.out.println("Response send for dialog id: " + dialogId + " and component id: " + componentId);
                 }
                
      
@@ -220,7 +221,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                                 "</upms>";
                     break;
                     case CONTINUE:
-                        
+                        //Thread.sleep(30000);
                         if(componentType.equals("unstructured_ss_notify")){
                          
                             response = "<upms>" +
@@ -262,7 +263,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                         
                      case END:
                          response = "";
-                        break;   
+                        break;
                     default:
             }
          }catch (Exception e) {
@@ -276,7 +277,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
     private void sendMsg(String xml){
         try {
 		byte[] c = new byte[4];
-		System.out.println(String.format("Sending: %d bytes", xml.length()));		
+		//System.out.println(String.format("Sending: %d bytes", xml.length()));		
 
 		int value = xml.length();
 		c[0] = (byte) (value & 0xFF);
