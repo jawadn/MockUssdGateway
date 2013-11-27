@@ -1,0 +1,41 @@
+package crovate;
+
+option java_package = "com.crovate.message";
+option java_outer_classname = "RequestResponse";
+
+message Request {
+
+  required string id = 1;
+  
+  required string op = 2;
+
+  required string cp = 3;
+
+  optional int32 timeout = 4;
+
+  required string message = 5;
+
+  required RequestType type = 7;
+
+  enum RequestType {
+  
+    BEGIN = 0;
+    CONTINUE = 1;
+    END = 2;
+    CLOSE = 3;
+    HEART_BEAT=4;
+  }
+
+}
+
+
+message Response {
+   
+   required string id = 1;
+
+   required string response = 2;
+
+   required bool error = 3;
+
+   required bool timeout = 4;
+}

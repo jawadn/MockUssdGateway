@@ -1,0 +1,15 @@
+package crovate;
+
+option java_package = "com.crovate.message";
+option java_outer_classname = "ProtoBuffResponse";
+
+message Response {
+   
+   required string id = 1;
+
+   required string response = 2;
+
+   required bool error = 3;
+
+   required bool timeout = 4;
+}
