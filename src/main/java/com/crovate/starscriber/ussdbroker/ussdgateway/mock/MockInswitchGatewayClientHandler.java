@@ -81,33 +81,31 @@ public class MockInswitchGatewayClientHandler implements Runnable{
 		input.read(header);
 		        								
                 int length = getLength(header);
-                System.out.println(String.format("Body length: %d", length));
-	
-           	
+                          	
 		byte[] body = new byte[length];
                 input.read(body);
 		String requestXml = new String(body, "UTF-8");
-                
-                Type type = getMsgType(requestXml);
-                
-                System.out.println("Request recieved of type:" + type.name());
-                if(!type.equals(Type.PONG) && !type.equals(Type.END) && !type.equals(Type.ABORT)){
-                    
-                    String dialogId = (String) xpath.evaluate("/upms/msg/dialog/@id", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
-                    String componentId = (String) xpath.evaluate("/upms/msg/component/@id", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
-                    String componentType = (String) xpath.evaluate("/upms/msg/component/@op", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
-                    int compId = 0;
-                    if(componentId != null && !componentId.isEmpty() && !componentId.equals("")){
-                        compId = Integer.valueOf(componentId);
+                if(!requestXml.isEmpty()){
+                    Type type = getMsgType(requestXml);
+
+                    System.out.println("Request recieved of type:" + type.name());
+                    if(!type.equals(Type.PONG) && !type.equals(Type.END) && !type.equals(Type.ABORT)){
+
+                        String dialogId = (String) xpath.evaluate("/upms/msg/dialog/@id", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
+                        String componentId = (String) xpath.evaluate("/upms/msg/component/@id", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
+                        String componentType = (String) xpath.evaluate("/upms/msg/component/@op", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
+                        int compId = 0;
+                        if(componentId != null && !componentId.isEmpty() && !componentId.equals("")){
+                            compId = Integer.valueOf(componentId);
+                        }
+                        String response = getResponse(type,dialogId,compId,componentType);
+
+                         synchronized(clientSocket.getOutputStream()){
+                            sendMsg(response);
+                         }
+                            System.out.println("Response send for dialog id: " + dialogId + " and component id: " + componentId);
                     }
-                    String response = getResponse(type,dialogId,compId,componentType);
-                    
-                     synchronized(clientSocket.getOutputStream()){
-                        sendMsg(response);
-                     }
-                        System.out.println("Response send for dialog id: " + dialogId + " and component id: " + componentId);
-                }
-               
+                }   
      
             } 
         } catch (IOException ex) {
@@ -134,29 +132,32 @@ public class MockInswitchGatewayClientHandler implements Runnable{
     private Type getMsgType(String str){
         
        try{
-            XPath xpath = XPathFactory.newInstance().newXPath();
-            InputSource source = new InputSource(new StringReader(str));
-					
-	    String type = (String) xpath.evaluate("/upms/msg/@type", source, XPathConstants.STRING);
-	    System.out.println(String.format("Msg Type: %s", type));
-            
-            if (type.equals("bind")){
-	       	return MockInswitchGatewayClientHandler.Type.BIND;
-	    } else if (type.equals("ping")){
-	       	return MockInswitchGatewayClientHandler.Type.PING;
-	    } else if (type.equals("pong")){
-	       	return MockInswitchGatewayClientHandler.Type.PONG;
-	    } else if  (type.equals("begin")){
-		return MockInswitchGatewayClientHandler.Type.BEGIN;
-	    } else if  (type.equals("continue")){
-		return MockInswitchGatewayClientHandler.Type.CONTINUE;
-	    } else if  (type.equals("end")){
-		return MockInswitchGatewayClientHandler.Type.END;
-	     } else if  (type.equals("abort")){
-		return MockInswitchGatewayClientHandler.Type.ABORT;
-	    }
-		
-	return MockInswitchGatewayClientHandler.Type.UNRECOGNIZED;
+            if(!str.isEmpty()){
+                
+                XPath xpath = XPathFactory.newInstance().newXPath();
+                InputSource source = new InputSource(new StringReader(str));
+
+                String type = (String) xpath.evaluate("/upms/msg/@type", source, XPathConstants.STRING);
+                System.out.println(String.format("Msg Type: %s", type));
+
+                if (type.equals("bind")){
+                    return MockInswitchGatewayClientHandler.Type.BIND;
+                } else if (type.equals("ping")){
+                    return MockInswitchGatewayClientHandler.Type.PING;
+                } else if (type.equals("pong")){
+                    return MockInswitchGatewayClientHandler.Type.PONG;
+                } else if  (type.equals("begin")){
+                    return MockInswitchGatewayClientHandler.Type.BEGIN;
+                } else if  (type.equals("continue")){
+                    return MockInswitchGatewayClientHandler.Type.CONTINUE;
+                } else if  (type.equals("end")){
+                    return MockInswitchGatewayClientHandler.Type.END;
+                 } else if  (type.equals("abort")){
+                    return MockInswitchGatewayClientHandler.Type.ABORT;
+                }
+            }
+	
+            return MockInswitchGatewayClientHandler.Type.UNRECOGNIZED;
 		
 	} catch (Exception e) {
              logger.log(Level.SEVERE, "Error occured", e);
