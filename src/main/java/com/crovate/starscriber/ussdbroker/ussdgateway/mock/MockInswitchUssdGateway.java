@@ -36,7 +36,7 @@ public class MockInswitchUssdGateway {
             {
                try{ 
                     connectionSocket = socket.accept();
-                    logger.log(Level.INFO,"Gateway client connected at port:{0}",connectionSocket.getLocalPort());
+                    logger.log(Level.INFO,"Gateway client connected at port:{}",connectionSocket.getLocalPort());
                     executors.submit(new MockInswitchGatewayClientHandler(connectionSocket));
                }catch (IOException e) {
                     logger.log(Level.SEVERE, "Could not listen on port:" + PORT, e);
