@@ -11,11 +11,11 @@ import java.io.PrintWriter;
 import java.io.StringReader;
 import java.net.Socket;
 import java.util.Random;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
 
 /**
@@ -28,7 +28,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
     OutputStream output ;
     InputStream input ;
     PrintWriter writer;
-    private final static Logger logger = Logger.getLogger(MockInswitchGatewayClientHandler.class.getName());
+    private final static Logger logger = LoggerFactory.getLogger(MockInswitchGatewayClientHandler.class);
     
     private final long pingSendIntervalInMillis = 30000;
     private long lastPingSentInMillis = 0;
@@ -66,7 +66,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                                 lastPingSentInMillis = System.currentTimeMillis(); 
                                }
                          } catch (Exception ex) {
-                             Logger.getLogger(MockInswitchGatewayClientHandler.class.getName()).log(Level.SEVERE, null, ex);
+                             logger.error("", ex);
                          }
 
                   } 
@@ -99,7 +99,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                             compId = Integer.valueOf(componentId);
                         }
                         String response = getResponse(type,dialogId,compId,componentType);
-
+                      
                          synchronized(clientSocket.getOutputStream()){
                             sendMsg(response);
                          }
@@ -109,9 +109,9 @@ public class MockInswitchGatewayClientHandler implements Runnable{
      
             } 
         } catch (IOException ex) {
-            Logger.getLogger(MockInswitchGatewayClientHandler.class.getName()).log(Level.SEVERE, null, ex);
+                logger.error("", ex);
         }catch (Exception ex) {
-                logger.log(Level.SEVERE, null, ex);
+                logger.error("", ex);
                 System.out.println("Exception occured in ServerConnection run() method");
           } 
         
@@ -160,7 +160,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
             return MockInswitchGatewayClientHandler.Type.UNRECOGNIZED;
 		
 	} catch (Exception e) {
-             logger.log(Level.SEVERE, "Error occured", e);
+             logger.error("Error occured", e);
 	     return MockInswitchGatewayClientHandler.Type.UNRECOGNIZED;
 	}
     
@@ -200,7 +200,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                     break;
                 case BEGIN:
                     randomSelectedOption = getRandomInt(1,3);
-                   
+                     // Thread.sleep(30000);
                     selectedOptionHex = StringUtil.convertStringToHex(String.valueOf(randomSelectedOption));
                     
                      System.out.println("-----Option Selected----" + randomSelectedOption + "-------for dialogId------"+dialogId);

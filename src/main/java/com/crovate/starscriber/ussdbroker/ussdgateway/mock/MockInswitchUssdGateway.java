@@ -9,8 +9,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -18,7 +18,7 @@ import java.util.logging.Logger;
  */
 public class MockInswitchUssdGateway {
     
-   private final static Logger logger = Logger.getLogger(MockInswitchUssdGateway.class.getName()); 
+   private final static Logger logger = LoggerFactory.getLogger(MockInswitchUssdGateway.class); 
    private static int PORT = 4322;
 
       
@@ -36,10 +36,10 @@ public class MockInswitchUssdGateway {
             {
                try{ 
                     connectionSocket = socket.accept();
-                    logger.log(Level.INFO,"Gateway client connected at port:{}",connectionSocket.getLocalPort());
+                    logger.info("Gateway client connected at port:{}",connectionSocket.getLocalPort());
                     executors.submit(new MockInswitchGatewayClientHandler(connectionSocket));
                }catch (IOException e) {
-                    logger.log(Level.SEVERE, "Could not listen on port:" + PORT, e);
+                    logger.error("Could not listen on port:{0}" , PORT, e);
                     System.exit(-1);
                 }
                
