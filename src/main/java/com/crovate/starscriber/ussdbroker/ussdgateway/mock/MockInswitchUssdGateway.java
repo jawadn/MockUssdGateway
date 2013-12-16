@@ -30,7 +30,7 @@ public class MockInswitchUssdGateway {
         
           ExecutorService executors = Executors.newFixedThreadPool(10);
           
-          System.out.println("Mock ussd gateway starts running on port" + PORT);
+          logger.info("Mock ussd gateway starts running on port {}", PORT);
           
           while(true)
             {
@@ -39,7 +39,7 @@ public class MockInswitchUssdGateway {
                     logger.info("Gateway client connected at port:{}",connectionSocket.getLocalPort());
                     executors.submit(new MockInswitchGatewayClientHandler(connectionSocket));
                }catch (IOException e) {
-                    logger.error("Could not listen on port:{0}" , PORT, e);
+                    logger.error("Could not listen on port:{}" , PORT, e);
                     System.exit(-1);
                 }
                

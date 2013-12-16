@@ -33,7 +33,8 @@ public class MockInswitchGatewayClientHandler implements Runnable{
     private final long pingSendIntervalInMillis = 30000;
     private long lastPingSentInMillis = 0;
     
-    
+    static int packetRecieved = 0;
+            
     public enum Type {
         BIND,PING, PONG, BEGIN, CONTINUE, END, ABORT, UNRECOGNIZED 
     }
@@ -48,7 +49,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
             input = clientSocket.getInputStream(); 
             writer = new PrintWriter(output);
             
-            
+          
             XPath xpath = XPathFactory.newInstance().newXPath();
             
             Thread pingThread = new Thread(new Runnable() {
@@ -88,7 +89,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                 if(!requestXml.isEmpty()){
                     Type type = getMsgType(requestXml);
 
-                    System.out.println("Request recieved of type:" + type.name());
+                    logger.debug("Request recieved of type:" + type.name());
                     if(!type.equals(Type.PONG) && !type.equals(Type.END) && !type.equals(Type.ABORT)){
 
                         String dialogId = (String) xpath.evaluate("/upms/msg/dialog/@id", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
@@ -103,10 +104,10 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                          synchronized(clientSocket.getOutputStream()){
                             sendMsg(response);
                          }
-                            System.out.println("Response send for dialog id: " + dialogId + " and component id: " + componentId);
+                            logger.debug("Response send for dialog id: " + dialogId + " and component id: " + componentId);
                     }
-                }   
-     
+                }  
+                
             } 
         } catch (IOException ex) {
                 logger.error("", ex);
@@ -138,7 +139,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                 InputSource source = new InputSource(new StringReader(str));
 
                 String type = (String) xpath.evaluate("/upms/msg/@type", source, XPathConstants.STRING);
-                System.out.println(String.format("Msg Type: %s", type));
+                logger.debug(String.format("Msg Type: %s", type));
 
                 if (type.equals("bind")){
                     return MockInswitchGatewayClientHandler.Type.BIND;
@@ -147,10 +148,16 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                 } else if (type.equals("pong")){
                     return MockInswitchGatewayClientHandler.Type.PONG;
                 } else if  (type.equals("begin")){
+                     packetRecieved++;
+                    logger.debug("**** Number of packet Recieved*****" + packetRecieved);
                     return MockInswitchGatewayClientHandler.Type.BEGIN;
                 } else if  (type.equals("continue")){
+                     packetRecieved++;
+                    logger.debug("**** Number of packet Recieved*****" + packetRecieved);
                     return MockInswitchGatewayClientHandler.Type.CONTINUE;
                 } else if  (type.equals("end")){
+                     packetRecieved++;
+                    logger.debug("**** Number of packet Recieved*****" + packetRecieved);
                     return MockInswitchGatewayClientHandler.Type.END;
                  } else if  (type.equals("abort")){
                     return MockInswitchGatewayClientHandler.Type.ABORT;
@@ -199,11 +206,11 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                                 "</upms>";
                     break;
                 case BEGIN:
-                    randomSelectedOption = getRandomInt(1,3);
-                     // Thread.sleep(30000);
+                    randomSelectedOption = getRandomInt(1,2);
+                   // Thread.sleep(30000);
                     selectedOptionHex = StringUtil.convertStringToHex(String.valueOf(randomSelectedOption));
                     
-                     System.out.println("-----Option Selected----" + randomSelectedOption + "-------for dialogId------"+dialogId);
+                    logger.debug("-----Option Selected----" + randomSelectedOption + "-------for dialogId------"+dialogId);
           
                     response = "<upms>" +
                                 "<msg type=\"continue\">" +
@@ -242,7 +249,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                         }else{
                             randomSelectedOption = getRandomInt(1,3);
                             selectedOptionHex = StringUtil.convertStringToHex(String.valueOf(randomSelectedOption));
-                            System.out.println("-----Option Selected----" + randomSelectedOption + "-------for dialogId------"+dialogId);
+                            logger.debug("-----Option Selected----" + randomSelectedOption + "-------for dialogId------"+dialogId);
                            
                             response = "<upms>" +
                                 "<msg type=\"continue\">" +
@@ -260,16 +267,16 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                                 "</upms>";
                             
                         }
-                        break;
+                       break;
                         
                      case END:
-                         response = "";
+                        response = "";
                         break;
                     default:
             }
          }catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("",e);
           }
             
             return response;
