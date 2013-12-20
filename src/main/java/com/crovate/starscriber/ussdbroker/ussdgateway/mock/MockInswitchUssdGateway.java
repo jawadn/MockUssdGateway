@@ -37,7 +37,11 @@ public class MockInswitchUssdGateway {
                try{ 
                     connectionSocket = socket.accept();
                     logger.info("Gateway client connected at port:{}",connectionSocket.getLocalPort());
-                    executors.submit(new MockInswitchGatewayClientHandler(connectionSocket));
+                    MockInswitchGatewayClientHandler mockClientHandler = new MockInswitchGatewayClientHandler(connectionSocket);
+                    if(argv.length > 0 ){
+                        mockClientHandler.setEnableRandomizer(Boolean.valueOf(argv[0]));
+                    }
+                    executors.submit(mockClientHandler);
                }catch (IOException e) {
                     logger.error("Could not listen on port:{}" , PORT, e);
                     System.exit(-1);

@@ -10,7 +10,11 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
@@ -28,13 +32,25 @@ public class MockInswitchGatewayClientHandler implements Runnable{
     OutputStream output ;
     InputStream input ;
     PrintWriter writer;
+    
+    private boolean enableRandomizer;
+    
     private final static Logger logger = LoggerFactory.getLogger(MockInswitchGatewayClientHandler.class);
     
     private final long pingSendIntervalInMillis = 30000;
     private long lastPingSentInMillis = 0;
     
     static int packetRecieved = 0;
-            
+
+    public boolean isEnableRandomizer() {
+        return enableRandomizer;
+    }
+
+    public void setEnableRandomizer(boolean enableRandomizer) {
+        this.enableRandomizer = enableRandomizer;
+    }
+
+  
     public enum Type {
         BIND,PING, PONG, BEGIN, CONTINUE, END, ABORT, UNRECOGNIZED 
     }
@@ -60,7 +76,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                         
                          try {
                              if (System.currentTimeMillis() - lastPingSentInMillis >= pingSendIntervalInMillis){
-                                String response = getResponse(Type.PONG, null,0,null);
+                                String response = getResponse(Type.PONG, null,0,null,0);
                                 synchronized(clientSocket.getOutputStream()){
                                     sendMsg(response);
                                 }
@@ -95,11 +111,27 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                         String dialogId = (String) xpath.evaluate("/upms/msg/dialog/@id", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
                         String componentId = (String) xpath.evaluate("/upms/msg/component/@id", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
                         String componentType = (String) xpath.evaluate("/upms/msg/component/@op", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
+                        
+                        int selectedOption = 0;
+                        
+                        if(isEnableRandomizer()){
+                            
+                            if(type.equals(Type.BEGIN) || (type.equals(Type.CONTINUE) && !componentType.equals("unstructured_ss_notify"))){
+                                String menuInHex = (String) xpath.evaluate("/upms/msg/component/param[@name='ussd_string']/@v", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
+
+                                String menu = StringUtil.convertHexToString(menuInHex);
+
+                                selectedOption = selectRandonOption(menu);
+                            }
+                            
+                        }else{
+                            selectedOption = getRandomInt(1,3);
+                        }
                         int compId = 0;
                         if(componentId != null && !componentId.isEmpty() && !componentId.equals("")){
                             compId = Integer.valueOf(componentId);
                         }
-                        String response = getResponse(type,dialogId,compId,componentType);
+                        String response = getResponse(type,dialogId,compId,componentType,selectedOption);
                       
                          synchronized(clientSocket.getOutputStream()){
                             sendMsg(response);
@@ -174,13 +206,13 @@ public class MockInswitchGatewayClientHandler implements Runnable{
     }
     
     
-     private String getResponse(Type type, String dialogId, int compId, String componentType){
+     private String getResponse(Type type, String dialogId, int compId, String componentType, int selectedMenuOption){
          
          String response = "";
          
          try{          
            
-           Integer randomSelectedOption = null;
+           Integer randomSelectedOption = selectedMenuOption;
            
            String selectedOptionHex = null; 
            
@@ -206,7 +238,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                                 "</upms>";
                     break;
                 case BEGIN:
-                    randomSelectedOption = getRandomInt(1,2);
+                   //randomSelectedOption = getRandomInt(1,2);
                    // Thread.sleep(30000);
                     selectedOptionHex = StringUtil.convertStringToHex(String.valueOf(randomSelectedOption));
                     
@@ -247,7 +279,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                                 "</msg>" +
                                 "</upms>";
                         }else{
-                            randomSelectedOption = getRandomInt(1,3);
+                           // randomSelectedOption = getRandomInt(1,3);
                             selectedOptionHex = StringUtil.convertStringToHex(String.valueOf(randomSelectedOption));
                             logger.debug("-----Option Selected----" + randomSelectedOption + "-------for dialogId------"+dialogId);
                            
@@ -321,6 +353,36 @@ public class MockInswitchGatewayClientHandler implements Runnable{
 
         return randomNum;
         
+    }
+    
+     public static int selectRandonOption(String menu){
+        
+      //  String regex = "(?m)^[\\d]";
+        
+        String regex = "(?m)(^[^\\s]+)"; // regex for matching the first character before space
+        
+        Matcher matcher = Pattern.compile(regex).matcher(menu);
+        
+        List<Integer> optionList = new ArrayList<Integer>();
+        
+        System.out.println("Options in menu:");
+        
+        while(matcher.find()){
+        String option = matcher.group(0).replaceAll("\\D", "");
+            if(option != null && !option.isEmpty()){
+                System.out.println("------"+option+"----");
+                optionList.add(Integer.valueOf(option));
+            }
+        }
+        
+        
+        Random rand = new Random();
+
+        int index = rand.nextInt(optionList.size());
+        int optionSelected = optionList.get(index);
+        
+        return optionSelected; 
+    
     }
 
 }
