@@ -4,6 +4,8 @@
  */
 package com.crovate.starscriber.ussdbroker.ussdgateway.mock;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -13,6 +15,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.xml.xpath.XPath;
@@ -40,7 +43,8 @@ public class MockInswitchGatewayClientHandler implements Runnable{
     private final long pingSendIntervalInMillis = 30000;
     private long lastPingSentInMillis = 0;
     
-    static int packetRecieved = 0;
+    AtomicInteger packetRecieved;
+    private static final AtomicInteger packetSent = new AtomicInteger(0);
 
     public boolean isEnableRandomizer() {
         return enableRandomizer;
@@ -55,14 +59,15 @@ public class MockInswitchGatewayClientHandler implements Runnable{
         BIND,PING, PONG, BEGIN, CONTINUE, END, ABORT, UNRECOGNIZED 
     }
 
-    public MockInswitchGatewayClientHandler(Socket clientSocket) {
+    public MockInswitchGatewayClientHandler(Socket clientSocket,AtomicInteger packetRecieved) {
         this.clientSocket = clientSocket;
+        this.packetRecieved = packetRecieved;
     }
 
     public void run() {
         try {
-            output = clientSocket.getOutputStream();
-            input = clientSocket.getInputStream(); 
+            output = new BufferedOutputStream(clientSocket.getOutputStream(),131072);
+            input = new BufferedInputStream(clientSocket.getInputStream(),131072); 
             writer = new PrintWriter(output);
             
           
@@ -77,7 +82,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                          try {
                              if (System.currentTimeMillis() - lastPingSentInMillis >= pingSendIntervalInMillis){
                                 String response = getResponse(Type.PONG, null,0,null,0);
-                                synchronized(clientSocket.getOutputStream()){
+                                synchronized(output){
                                     sendMsg(response);
                                 }
                                 lastPingSentInMillis = System.currentTimeMillis(); 
@@ -125,18 +130,29 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                             }
                             
                         }else{
-                            selectedOption = getRandomInt(1,3);
+                           // selectedOption = getRandomInt(1,2);
+                            selectedOption = 3; // make the selection fixed
                         }
                         int compId = 0;
                         if(componentId != null && !componentId.isEmpty() && !componentId.equals("")){
                             compId = Integer.valueOf(componentId);
                         }
                         String response = getResponse(type,dialogId,compId,componentType,selectedOption);
-                      
-                         synchronized(clientSocket.getOutputStream()){
+                      if(type.equals(Type.BIND) || type.equals(Type.PING)){
+                         synchronized(output){
                             sendMsg(response);
                          }
-                            logger.debug("Response send for dialog id: " + dialogId + " and component id: " + componentId);
+                      }
+                       
+                      if(type.equals(Type.BEGIN) || type.equals(Type.CONTINUE)){
+                             packetSent.incrementAndGet();
+                            if(packetSent.get()==1 || (packetSent.get()%500 == 0)){
+                                logger.debug("Threshold Response {} send to broker at time {}",packetSent.get(),System.currentTimeMillis());
+                            }
+                         }
+                          
+                      logger.debug("Response send for type:{} and dialog id:{} and component id:{} ",type ,dialogId,componentId);
+                     
                     }
                 }  
                 
@@ -180,22 +196,31 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                 } else if (type.equals("pong")){
                     return MockInswitchGatewayClientHandler.Type.PONG;
                 } else if  (type.equals("begin")){
-                     packetRecieved++;
-                    logger.debug("**** Number of packet Recieved*****" + packetRecieved);
+                    
+                    logger.debug("**** Number of packet Recieved*****" + packetRecieved.incrementAndGet());
+                    if(packetRecieved.get()==1 || (packetRecieved.get()%500 == 0)){
+                        logger.debug("Threshold Request {} recieved at Mock gateway at time {}",packetRecieved.get(),System.currentTimeMillis());
+                    }
                     return MockInswitchGatewayClientHandler.Type.BEGIN;
                 } else if  (type.equals("continue")){
-                     packetRecieved++;
-                    logger.debug("**** Number of packet Recieved*****" + packetRecieved);
+                    
+                    logger.debug("**** Number of packet Recieved*****" + packetRecieved.incrementAndGet());
+                    if(packetRecieved.get()==1 || (packetRecieved.get()%500 == 0)){
+                        logger.debug("Threshold Request {} recieved at Mock gateway at time {}",packetRecieved.get(),System.currentTimeMillis());
+                    }
                     return MockInswitchGatewayClientHandler.Type.CONTINUE;
                 } else if  (type.equals("end")){
-                     packetRecieved++;
-                    logger.debug("**** Number of packet Recieved*****" + packetRecieved);
+                    
+                    logger.debug("**** Number of packet Recieved*****" + packetRecieved.incrementAndGet());
+                    if(packetRecieved.get()==1 || (packetRecieved.get()%500 == 0)){
+                        logger.debug("Threshold Request {} recieved at Mock gateway at time {}",packetRecieved.get(),System.currentTimeMillis());
+                    }
                     return MockInswitchGatewayClientHandler.Type.END;
                  } else if  (type.equals("abort")){
                     return MockInswitchGatewayClientHandler.Type.ABORT;
                 }
             }
-	
+            
             return MockInswitchGatewayClientHandler.Type.UNRECOGNIZED;
 		
 	} catch (Exception e) {
@@ -329,10 +354,11 @@ public class MockInswitchGatewayClientHandler implements Runnable{
 		
 		// Send packet length
 		output.write(c, 0, 4);
-				
-		writer.write(xml);
-		writer.flush();
 		
+		writer.write(xml);
+                
+		writer.flush();
+		output.flush();		
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
