@@ -119,7 +119,7 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                         
                         int selectedOption = 0;
                         
-                        if(isEnableRandomizer()){
+                       // if(isEnableRandomizer()){
                             
                             if(type.equals(Type.BEGIN) || (type.equals(Type.CONTINUE) && !componentType.equals("unstructured_ss_notify"))){
                                 String menuInHex = (String) xpath.evaluate("/upms/msg/component/param[@name='ussd_string']/@v", new InputSource(new StringReader(requestXml)), XPathConstants.STRING);
@@ -129,20 +129,20 @@ public class MockInswitchGatewayClientHandler implements Runnable{
                                 selectedOption = selectRandonOption(menu);
                             }
                             
-                        }else{
+                       // }else{
                            // selectedOption = getRandomInt(1,2);
-                            selectedOption = 3; // make the selection fixed
-                        }
+                        //    selectedOption = 3; // make the selection fixed
+                       // }
                         int compId = 0;
                         if(componentId != null && !componentId.isEmpty() && !componentId.equals("")){
                             compId = Integer.valueOf(componentId);
                         }
                         String response = getResponse(type,dialogId,compId,componentType,selectedOption);
-                      if(type.equals(Type.BIND) || type.equals(Type.PING)){
+                  //    if(type.equals(Type.BIND) || type.equals(Type.PING)){
                          synchronized(output){
                             sendMsg(response);
                          }
-                      }
+                   //   }
                        
                       if(type.equals(Type.BEGIN) || type.equals(Type.CONTINUE)){
                              packetSent.incrementAndGet();
@@ -403,10 +403,13 @@ public class MockInswitchGatewayClientHandler implements Runnable{
         
         
         Random rand = new Random();
-
-        int index = rand.nextInt(optionList.size());
-        int optionSelected = optionList.get(index);
+        int size = optionList.size();
+        int optionSelected = 0;
         
+        if(size > 0){
+            int index = rand.nextInt(size);
+            optionSelected = optionList.get(index);
+        }
         return optionSelected; 
     
     }
